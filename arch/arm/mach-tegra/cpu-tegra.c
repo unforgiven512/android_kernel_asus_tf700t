@@ -59,6 +59,7 @@
 unsigned int power_mode_table[SYSTEM_MODE_END]={1000000,1200000,1400000,1500000,1600000};
 
 #define ASUS_OVERCLOCK
+#define EMC_MINMIAM_RATE (204000000)
 #define CAMERA_ENABLE_EMC_MINMIAM_RATE (667000000)
 /* tegra throttling and edp governors require frequencies in the table
    to be in ascending order */
@@ -1143,6 +1144,14 @@ void rebuild_max_freq_table(max_rate)
 
 static int tegra_cpu_init(struct cpufreq_policy *policy)
 {
+	struct clk *c=NULL;
+	unsigned int project_id = tegra3_get_project_id();
+
+	if(TEGRA3_PROJECT_TF700T == project_id)
+	{
+		c=tegra_get_clock_by_name("emc");
+	}
+
 	if (policy->cpu >= CONFIG_NR_CPUS)
 		return -EINVAL;
 
@@ -1154,6 +1163,24 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 	if (IS_ERR(emc_clk)) {
 		clk_put(cpu_clk);
 		return PTR_ERR(emc_clk);
+	}
+
+	if(TEGRA3_PROJECT_TF700T == project_id)
+	{
+		unsigned long  cpu_emc_cur_rate=clk_get_rate(emc_clk);
+		unsigned long  emc_cur_rate=clk_get_rate(c);
+		printk(" %s : emc_clk->min_rate to 204M\n", __func__);
+		emc_clk->min_rate=EMC_MINMIAM_RATE;
+		c->min_rate=EMC_MINMIAM_RATE;
+
+		if(cpu_emc_cur_rate < emc_clk->min_rate )
+		{
+			clk_set_rate(emc_clk, EMC_MINMIAM_RATE);
+		}
+		if(emc_cur_rate < c->min_rate )
+		{
+			clk_set_rate(c, EMC_MINMIAM_RATE);
+		}
 	}
 
 	clk_enable(emc_clk);

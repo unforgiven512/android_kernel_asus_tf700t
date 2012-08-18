@@ -4006,7 +4006,7 @@ static struct clk tegra_clk_cpu_cmplx = {
 	.name      = "cpu",
 	.inputs    = mux_cpu_cmplx,
 	.ops       = &tegra_cpu_cmplx_ops,
-	.max_rate  = 1900000000,
+	.max_rate  = 1700000000,
 };
 
 static struct clk tegra_clk_cop = {

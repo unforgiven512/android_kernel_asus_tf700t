@@ -699,6 +699,7 @@ static int spk_event(struct snd_soc_dapm_widget *w,
 	unsigned int rt531_dac_pwr = 0;
 	unsigned int tf700t_pcb_id = 0;
 	unsigned int project_id = 0;
+	unsigned int reg_val;
 
 	tf700t_pcb_id = tegra3_query_pcba_revision_pcbid();
 	project_id = tegra3_get_project_id();
@@ -837,6 +838,12 @@ static int spk_event(struct snd_soc_dapm_widget *w,
 
 	default:
 		return 0;
+	}
+
+	if(project_id == TEGRA3_PROJECT_TF700T){
+		rt5631_write_index(codec, 0x48, 0xF73C);
+		reg_val = rt5631_read_index(codec, 0x48);
+		printk("%s -codec index 0x48=0x%04X\n", __FUNCTION__, reg_val);
 	}
 
 	return 0;
