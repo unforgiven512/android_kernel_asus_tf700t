@@ -340,11 +340,11 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 
 				if (gpio_get_value(TEGRA_GPIO_PI6)==0){	//panel is panasonic
 					printk("Panel is panasonic");
-					mdelay(70);
+					mdelay(35);
 				}
 				else{								//panel is hydis
 					printk("Panel is hydis");
-					mdelay(235);
+					mdelay(70);
 				}
 			}
 		}

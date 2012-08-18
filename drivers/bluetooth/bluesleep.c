@@ -67,10 +67,8 @@
 #define POLARITY_LOW 0
 #define POLARITY_HIGH 1
 
-extern unsigned int factory_mode;
-
 /* enable/disable wake-on-bluetooth */
-//#define BT_ENABLE_IRQ_WAKE 0
+#define BT_ENABLE_IRQ_WAKE 1
 
 struct bluesleep_info {
 	unsigned host_wake;
@@ -372,17 +370,13 @@ static int bluesleep_start(void)
 	if (bsi->has_ext_wake == 1)
 		gpio_set_value(bsi->ext_wake, 1);
 	set_bit(BT_EXT_WAKE, &flags);
-
-	//#if BT_ENABLE_IRQ_WAKE
-	if(factory_mode != 2){
-		retval = enable_irq_wake(bsi->host_wake_irq);
-		if (retval < 0) {
-			BT_ERR("Couldn't enable BT_HOST_WAKE as wakeup interrupt");
-			goto fail;
-		}
+#if BT_ENABLE_IRQ_WAKE
+	retval = enable_irq_wake(bsi->host_wake_irq);
+	if (retval < 0) {
+		BT_ERR("Couldn't enable BT_HOST_WAKE as wakeup interrupt");
+		goto fail;
 	}
-	//#endif
-
+#endif
 	set_bit(BT_PROTO, &flags);
 	wake_lock(&bsi->wake_lock);
 	return 0;
@@ -407,9 +401,8 @@ static void bluesleep_stop(void)
 	}
 	/* assert BT_WAKE */
 	if (bsi->has_ext_wake == 1)
-		gpio_set_value(bsi->ext_wake, 0);
-	clear_bit(BT_EXT_WAKE, &flags);
-	//set_bit(BT_EXT_WAKE, &flags);
+		gpio_set_value(bsi->ext_wake, 1);
+	set_bit(BT_EXT_WAKE, &flags);
 	del_timer(&tx_timer);
 	clear_bit(BT_PROTO, &flags);
 
@@ -421,12 +414,10 @@ static void bluesleep_stop(void)
 	atomic_inc(&open_count);
 	spin_unlock_irqrestore(&rw_lock, irq_flags);
 
-	//#if BT_ENABLE_IRQ_WAKE
-	if(factory_mode != 2){
-		if (disable_irq_wake(bsi->host_wake_irq))
-			BT_ERR("Couldn't disable hostwake IRQ wakeup mode\n");
-	}
-	//#endif
+#if BT_ENABLE_IRQ_WAKE
+	if (disable_irq_wake(bsi->host_wake_irq))
+		BT_ERR("Couldn't disable hostwake IRQ wakeup mode\n");
+#endif
 	wake_lock_timeout(&bsi->wake_lock, HZ / 2);
 }
 /**
@@ -817,11 +808,8 @@ static int __init bluesleep_init(void)
 
 	/* assert bt wake */
 	if (bsi->has_ext_wake == 1)
-		gpio_set_value(bsi->ext_wake, 0);
-		//gpio_set_value(bsi->ext_wake, 1);
-	clear_bit(BT_EXT_WAKE, &flags);
-	//set_bit(BT_EXT_WAKE, &flags);
-
+		gpio_set_value(bsi->ext_wake, 1);
+	set_bit(BT_EXT_WAKE, &flags);
 	hci_register_notifier(&hci_event_nblock);
 
 	return 0;

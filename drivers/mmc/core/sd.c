@@ -348,7 +348,7 @@ static int mmc_read_switch(struct mmc_card *card)
 	}
 
 	if (status[13] & 0x02)
-		card->sw_caps.hs_max_dtr = 50000000;
+		card->sw_caps.hs_max_dtr = UHS_DDR41_MAX_DTR;
 
 out:
 	kfree(status);
@@ -488,7 +488,7 @@ static int sd_set_bus_speed_mode(struct mmc_card *card, u8 *status)
 		   (card->sw_caps.sd3_bus_mode & SD_MODE_UHS_DDR50)) {
 			bus_speed = UHS_DDR50_BUS_SPEED;
 			timing = MMC_TIMING_UHS_DDR50;
-			card->sw_caps.uhs_max_dtr = UHS_DDR50_MAX_DTR;
+			card->sw_caps.uhs_max_dtr = UHS_DDR41_MAX_DTR;
 	} else if ((card->host->caps & (MMC_CAP_UHS_SDR104 |
 		    MMC_CAP_UHS_SDR50)) && (card->sw_caps.sd3_bus_mode &
 		    SD_MODE_UHS_SDR50)) {

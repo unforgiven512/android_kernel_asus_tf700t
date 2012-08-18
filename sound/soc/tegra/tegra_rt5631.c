@@ -24,6 +24,7 @@
 #include "tegra_asoc_utils.h"
 #include <mach/board-cardhu-misc.h>
 
+#include "../drivers/input/asusec/asusdec.h"
 #define DRV_NAME "tegra-snd-codec"
 
 struct tegra_rt5631 {
@@ -35,6 +36,73 @@ struct tegra_rt5631 {
 	int jack_status;
 #endif
 };
+extern bool headset_alive;
+extern bool lineout_alive;
+extern struct snd_soc_codec *global_audio_codec;
+static bool audio_dock_in = false;
+static bool audio_stand_in = false;
+
+bool isAudioStandIn(void)
+{
+    return audio_stand_in;
+}
+
+EXPORT_SYMBOL(audio_stand_in);
+
+int audio_stand_route(bool status)
+{
+    if(global_audio_codec == NULL){
+        printk("%s: global_audio_codec is NULL\n", __func__);
+        return 0;
+    }
+
+    struct snd_soc_dapm_context *dapm = &global_audio_codec->dapm;
+
+    if(snd_soc_dapm_get_pin_status(dapm, "Int Spk") || snd_soc_dapm_get_pin_status(dapm, "AUX")){
+         if(status){
+                printk("%s: audio stand lineout on\n", __func__);
+                snd_soc_dapm_enable_pin(dapm, "AUX");
+                snd_soc_dapm_disable_pin(dapm, "Int Spk");
+                snd_soc_dapm_sync(dapm);
+         }else{
+                printk("%s: audio stand lineout off\n", __func__);
+                snd_soc_dapm_disable_pin(dapm, "AUX");
+                snd_soc_dapm_enable_pin(dapm, "Int Spk");
+                snd_soc_dapm_sync(dapm);
+         }
+    }
+}
+EXPORT_SYMBOL(audio_stand_route);
+
+
+int audio_dock_in_out(u8 status)
+{
+    audio_dock_in = (status == AUDIO_DOCK) ? true : false;
+    audio_stand_in = (status == AUDIO_STAND) ? true : false;
+
+    if(global_audio_codec == NULL){
+        printk("%s: global_audio_codec is NULL\n", __func__);
+        return 0;
+    }
+
+    struct snd_soc_dapm_context *dapm = &global_audio_codec->dapm;
+
+    if(snd_soc_dapm_get_pin_status(dapm, "Int Spk") || snd_soc_dapm_get_pin_status(dapm, "AUX")){
+	 if(status == AUDIO_DOCK ){
+		printk("%s: audio_dock_in\n", __func__);
+		snd_soc_dapm_enable_pin(dapm, "AUX");
+		snd_soc_dapm_disable_pin(dapm, "Int Spk");
+		snd_soc_dapm_sync(dapm);
+	 }else{
+		printk("%s: audio_stand_dock_out\n", __func__);
+		snd_soc_dapm_disable_pin(dapm, "AUX");
+		snd_soc_dapm_enable_pin(dapm, "Int Spk");
+		snd_soc_dapm_sync(dapm);
+	 }
+    }
+}
+EXPORT_SYMBOL(audio_dock_in_out);
+	
 
 static int tegra_rt5631_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
@@ -114,6 +182,7 @@ static const struct snd_soc_dapm_widget cardhu_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_MIC("Int Mic", NULL),
+	SND_SOC_DAPM_SPK("AUX", NULL),
 
 };
 
@@ -132,6 +201,7 @@ static const struct snd_soc_dapm_route cardhu_audio_map[] = {
 	{"MIC1", NULL, "Mic Bias1"},
 	{"Mic Bias1", NULL, "Mic Jack"},
 	{"DMIC", NULL, "Int Mic"},
+	{"AUX", NULL, "AUXO2"},
 };
 
 static const struct snd_kcontrol_new cardhu_controls[] = {
@@ -139,6 +209,7 @@ static const struct snd_kcontrol_new cardhu_controls[] = {
 	SOC_DAPM_PIN_SWITCH("Headphone Jack"),
 	SOC_DAPM_PIN_SWITCH("Mic Jack"),
 	SOC_DAPM_PIN_SWITCH("Int Mic"),
+	SOC_DAPM_PIN_SWITCH("AUX"),
 };
 
 static const struct snd_kcontrol_new tegra_rt5631_default_controls[] = {
@@ -188,6 +259,7 @@ static int tegra_rt5631_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_disable_pin(dapm, "Mic Jack");
 	snd_soc_dapm_disable_pin(dapm, "Headphone Jack");
 	snd_soc_dapm_disable_pin(dapm, "Int Spk");
+	snd_soc_dapm_disable_pin(dapm, "AUX");
 	snd_soc_dapm_sync(dapm);
 
 	return 0;

@@ -101,6 +101,10 @@ struct snd_soc_codec *global_audio_codec = NULL;
 EXPORT_SYMBOL(global_audio_codec) ;
 extern bool headset_alive;
 
+extern int asusAudiodec_i2c_write_data(char *data, int length);
+extern int asusAudiodec_i2c_read_data(char *data, int length);
+extern int asus_dock_in_state(void);
+
 module_param(timesofbclk, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 MODULE_PARM_DESC(timeofbclk, "relationship between bclk and fs");
 
@@ -272,8 +276,8 @@ static struct rt5631_init_reg init_list[] = {
 	{RT5631_ADC_CTRL_1		, 0x8080},
 	{RT5631_SPK_OUT_VOL		, 0xc7c7},
 	{RT5631_HP_OUT_VOL		, 0xc5c5},
-	{RT5631_MONO_AXO_1_2_VOL	, 0xa080},
 	{RT5631_ADC_REC_MIXER		, 0xb0f0},
+	{RT5631_MONO_AXO_1_2_VOL	, 0xe040},
 	{RT5631_MIC_CTRL_2		, 0x6600},
 	{RT5631_OUTMIXER_L_CTRL		, 0xdfC0},
 	{RT5631_OUTMIXER_R_CTRL		, 0xdfC0},
@@ -285,6 +289,7 @@ static struct rt5631_init_reg init_list[] = {
 	{RT5631_INT_ST_IRQ_CTRL_2	, 0x0f18},
 	{RT5631_ALC_CTRL_1	, 0x0B00}, //ALC Attack time  = 170.667ms, Recovery time = 83.333us
 	{RT5631_ALC_CTRL_3  , 0x2410}, //Enable for DAC path, Limit level = -6dBFS
+	{RT5631_AXO2MIXER_CTRL		, 0x8860},
 };
 #define RT5631_INIT_REG_LEN ARRAY_SIZE(init_list)
 
@@ -1142,9 +1147,12 @@ static int auxo2_event(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = w->codec;
 	static bool aux2_en;
+	char mute_all_audioDock[2] = {0xFF, 0x01};
+	char unmute_all_audioDock[2] = {0x00, 0x01};
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMD:
+		asusAudiodec_i2c_write_data(mute_all_audioDock, 2);
 		if (aux2_en) {
 			rt5631_write_mask(codec, RT5631_MONO_AXO_1_2_VOL,
 						RT_R_MUTE, RT_R_MUTE);
@@ -1158,6 +1166,7 @@ static int auxo2_event(struct snd_soc_dapm_widget *w,
 						0, RT_R_MUTE);
 			aux2_en = true;
 		}
+		asusAudiodec_i2c_write_data(unmute_all_audioDock, 2);
 		break;
 
 	default:
@@ -1532,6 +1541,7 @@ static const struct snd_soc_dapm_route audio_map[] = {
 
 	{"AXO2MIX Mixer", "MIC1_BST1 Playback Switch", "Mic1 Boost"},
 	{"AXO2MIX Mixer", "OUTVOLL Playback Switch", "Left Out Vol"},
+	{"AXO2MIX Mixer", "OUTVOLL Playback Switch", "Right Out Vol"},
 	{"AXO2MIX Mixer", "OUTVOLR Playback Switch", "Right Out Vol"},
 	{"AXO2MIX Mixer", "MIC2_BST2 Playback Switch", "Mic2 Boost"},
 
@@ -1833,7 +1843,13 @@ static int rt5631_hifi_pcm_params(struct snd_pcm_substream *substream,
 		if(headset_alive)
 			rt5631_close_dmic(codec);
 	}
-
+/*
+	if (SNDRV_PCM_STREAM_PLAYBACK == stream){
+		printk("set audio dock unmute\n");
+		char data1[2] = {0x01, 0x01};
+        	asusAudiodec_i2c_write_data(data1, 2);
+	}
+*/	
 	rt5631_write_mask(codec, RT5631_SDP_CTRL, iface, SDP_I2S_DL_MASK);
 
 	if (coeff >= 0)
@@ -2106,6 +2122,89 @@ static struct miscdevice i2c_audio_device = {
 	.fops = &audio_codec_fops,
 };
 
+static ssize_t read_audio_dock_status(struct device *dev,
+        struct device_attribute *attr, char *buf)
+{
+        char data1[2] = {0x05, 0x01};
+	char data3[8] = {0};
+	int i = 0;
+        asusAudiodec_i2c_write_data(data1, 2);
+        asusAudiodec_i2c_read_data(data3, 8);
+        for( i = 0; i < 8; i++){
+             printk("index: %d data = %d\n", i, data3[i]);
+        }
+        return sprintf(buf, "use command: dmesg -c \n");
+}
+DEVICE_ATTR(read_audio_dock, S_IRUGO, read_audio_dock_status, NULL);
+
+
+static ssize_t unmute1_audio_dock_status(struct device *dev,
+        struct device_attribute *attr, char *buf)
+{
+        char data1[2] = {0x01, 0x01};
+
+        asusAudiodec_i2c_write_data(data1, 2);
+
+        return sprintf(buf, "unmute\n");
+}
+DEVICE_ATTR(unmute1_audio_dock, S_IRUGO, unmute1_audio_dock_status, NULL);
+
+static ssize_t unmute2_audio_dock_status(struct device *dev,
+        struct device_attribute *attr, char *buf)
+{
+        char data1[2] = {0x02, 0x01};
+
+        asusAudiodec_i2c_write_data(data1, 2);
+
+        return sprintf(buf, "unmute\n");
+}
+DEVICE_ATTR(unmute2_audio_dock, S_IRUGO, unmute2_audio_dock_status, NULL);
+
+
+static ssize_t unmute3_audio_dock_status(struct device *dev,
+        struct device_attribute *attr, char *buf)
+{
+        char data1[2] = {0x03, 0x01};
+
+        asusAudiodec_i2c_write_data(data1, 2);
+
+        return sprintf(buf, "unmute\n");
+}
+DEVICE_ATTR(unmute3_audio_dock, S_IRUGO, unmute3_audio_dock_status, NULL);
+
+
+static ssize_t unmute4_audio_dock_status(struct device *dev,
+        struct device_attribute *attr, char *buf)
+{
+        char data1[2] = {0x04, 0x01};
+
+        asusAudiodec_i2c_write_data(data1, 2);
+
+        return sprintf(buf, "unmute\n");
+}
+DEVICE_ATTR(unmute4_audio_dock, S_IRUGO, unmute4_audio_dock_status, NULL);
+
+static ssize_t unmute_audio_dock_status(struct device *dev,
+        struct device_attribute *attr, char *buf)
+{
+        char data1[2] = {0x00, 0x01};
+
+        asusAudiodec_i2c_write_data(data1, 2);
+
+        return sprintf(buf, "unmute\n");
+}
+DEVICE_ATTR(unmute_audio_dock, S_IRUGO, unmute_audio_dock_status, NULL);
+
+static ssize_t mute_audio_dock_status(struct device *dev,
+        struct device_attribute *attr, char *buf)
+{
+        char data1[2] = {0xff, 0x01};
+
+        asusAudiodec_i2c_write_data(data1, 2);
+
+        return sprintf(buf, "mute\n");
+}
+DEVICE_ATTR(mute_audio_dock, S_IRUGO, mute_audio_dock_status, NULL);
 
 static ssize_t read_audio_codec_status(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -2322,6 +2421,10 @@ static int rt5631_set_bias_level(struct snd_soc_codec *codec,
 		break;
 
 	case SND_SOC_BIAS_STANDBY:
+/*
+                printk("set audio dock mute\n");
+                char data1[2] = {0x03, 0x01};
+                asusAudiodec_i2c_write_data(data1, 2);*/
 		break;
 
 	case SND_SOC_BIAS_OFF:
@@ -2333,6 +2436,7 @@ static int rt5631_set_bias_level(struct snd_soc_codec *codec,
 		rt5631_write(codec, RT5631_PWR_MANAG_ADD2, 0x0000);
 		rt5631_write(codec, RT5631_PWR_MANAG_ADD3, 0x0000);
 		rt5631_write(codec, RT5631_PWR_MANAG_ADD4, 0x0000);
+
 		break;
 
 	default:
@@ -2581,6 +2685,50 @@ static int rt5631_probe(struct snd_soc_codec *codec)
 			"Failed to create audio_codec_status sysfs files: %d\n", ret);
 		return ret;
 	}
+        ret = device_create_file(codec->dev, &dev_attr_mute_audio_dock);
+        if (ret != 0) {
+                dev_err(codec->dev,
+                        "Failed to create audio_codec_status sysfs files: %d\n", ret);
+                return ret;
+        }
+        ret = device_create_file(codec->dev, &dev_attr_unmute_audio_dock);
+        if (ret != 0) {
+                dev_err(codec->dev,
+                        "Failed to create audio_codec_status sysfs files: %d\n", ret);
+                return ret;
+        }
+        ret = device_create_file(codec->dev, &dev_attr_read_audio_dock);
+        if (ret != 0) {
+                dev_err(codec->dev,
+                        "Failed to create audio_codec_status sysfs files: %d\n", ret);
+                return ret;
+        }
+
+        ret = device_create_file(codec->dev, &dev_attr_unmute1_audio_dock);
+        if (ret != 0) {
+                dev_err(codec->dev,
+                        "Failed to create audio_codec_status sysfs files: %d\n", ret);
+                return ret;
+        }
+        ret = device_create_file(codec->dev, &dev_attr_unmute2_audio_dock);
+        if (ret != 0) {
+                dev_err(codec->dev,
+                        "Failed to create audio_codec_status sysfs files: %d\n", ret);
+                return ret;
+        }
+        ret = device_create_file(codec->dev, &dev_attr_unmute3_audio_dock);
+        if (ret != 0) {
+                dev_err(codec->dev,
+                        "Failed to create audio_codec_status sysfs files: %d\n", ret);
+                return ret;
+        }
+        ret = device_create_file(codec->dev, &dev_attr_unmute4_audio_dock);
+        if (ret != 0) {
+                dev_err(codec->dev,
+                        "Failed to create audio_codec_status sysfs files: %d\n", ret);
+                return ret;
+        }
+
 	if(rt5631_read(rt5631_codec, RT5631_VENDOR_ID1) == 0x10EC)
 		audio_codec_status = 1;
 	else
