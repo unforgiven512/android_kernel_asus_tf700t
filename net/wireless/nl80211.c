@@ -3588,7 +3588,8 @@ static int nl80211_authenticate(struct sk_buff *skb, struct genl_info *info)
 		return -EOPNOTSUPP;
 
 	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_STATION &&
-	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT)
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT &&
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_ADHOC)
 		return -EOPNOTSUPP;
 
 	bssid = nla_data(info->attrs[NL80211_ATTR_MAC]);
@@ -3718,7 +3719,8 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 		return -EOPNOTSUPP;
 
 	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_STATION &&
-	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT)
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT &&
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_ADHOC)
 		return -EOPNOTSUPP;
 
 	bssid = nla_data(info->attrs[NL80211_ATTR_MAC]);
@@ -3779,7 +3781,8 @@ static int nl80211_deauthenticate(struct sk_buff *skb, struct genl_info *info)
 		return -EOPNOTSUPP;
 
 	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_STATION &&
-	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT)
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT &&
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_ADHOC)
 		return -EOPNOTSUPP;
 
 	bssid = nla_data(info->attrs[NL80211_ATTR_MAC]);
@@ -3823,7 +3826,8 @@ static int nl80211_disassociate(struct sk_buff *skb, struct genl_info *info)
 		return -EOPNOTSUPP;
 
 	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_STATION &&
-	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT)
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT &&
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_ADHOC)
 		return -EOPNOTSUPP;
 
 	bssid = nla_data(info->attrs[NL80211_ATTR_MAC]);
@@ -4133,7 +4137,8 @@ static int nl80211_connect(struct sk_buff *skb, struct genl_info *info)
 		return err;
 
 	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_STATION &&
-	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT)
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT &&
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_ADHOC)
 		return -EOPNOTSUPP;
 
 	wiphy = &rdev->wiphy;
@@ -4185,7 +4190,8 @@ static int nl80211_disconnect(struct sk_buff *skb, struct genl_info *info)
 		return -EINVAL;
 
 	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_STATION &&
-	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT)
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT &&
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_ADHOC)
 		return -EOPNOTSUPP;
 
 	return cfg80211_disconnect(rdev, dev, reason, true);
@@ -4237,7 +4243,8 @@ static int nl80211_setdel_pmksa(struct sk_buff *skb, struct genl_info *info)
 	pmksa.bssid = nla_data(info->attrs[NL80211_ATTR_MAC]);
 
 	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_STATION &&
-	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT)
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT &&
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_ADHOC)
 		return -EOPNOTSUPP;
 
 	switch (info->genlhdr->cmd) {
@@ -4264,7 +4271,8 @@ static int nl80211_flush_pmksa(struct sk_buff *skb, struct genl_info *info)
 	struct net_device *dev = info->user_ptr[1];
 
 	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_STATION &&
-	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT)
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT &&
+	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_ADHOC)
 		return -EOPNOTSUPP;
 
 	if (!rdev->ops->flush_pmksa)
@@ -4690,7 +4698,8 @@ static int nl80211_set_cqm_rssi(struct genl_info *info,
 		return -EOPNOTSUPP;
 
 	if (wdev->iftype != NL80211_IFTYPE_STATION &&
-	    wdev->iftype != NL80211_IFTYPE_P2P_CLIENT)
+	    wdev->iftype != NL80211_IFTYPE_P2P_CLIENT &&
+	    wdev->iftype != NL80211_IFTYPE_ADHOC)
 		return -EOPNOTSUPP;
 
 	return rdev->ops->set_cqm_rssi_config(wdev->wiphy, dev,

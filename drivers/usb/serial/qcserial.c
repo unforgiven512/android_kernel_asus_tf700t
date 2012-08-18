@@ -21,7 +21,8 @@
 #define DRIVER_AUTHOR "Qualcomm Inc"
 #define DRIVER_DESC "Qualcomm USB Serial driver"
 
-static int debug;
+//static int debug;
+static int debug = 1;
 
 static const struct usb_device_id id_table[] = {
 	{USB_DEVICE(0x05c6, 0x9211)},	/* Acer Gobi QDL device */
@@ -82,6 +83,10 @@ static const struct usb_device_id id_table[] = {
 	{USB_DEVICE(0x16d8, 0x8002)},	/* CMDTech Gobi 2000 Modem device (VU922) */
 	{USB_DEVICE(0x05c6, 0x9204)},	/* Gobi 2000 QDL device */
 	{USB_DEVICE(0x05c6, 0x9205)},	/* Gobi 2000 Modem device */
+	{USB_DEVICE(0x05c6, 0x900d)},	/* Qualcomm CDMA Technologies MSM */
+	{USB_DEVICE(0x05c6, 0x900e)},	/* Qualcomm CDMA Technologies MSM Emergency Download Mode */
+	{USB_DEVICE(0x05c6, 0x9007)},	/* Qualcomm CDMA Technologies MSM without ASUS QCN */
+	{USB_DEVICE(0x05c6, 0x9008)},	/* Qualcomm CDMA Technologies MSM Download Mode */
 	{ }				/* Terminating entry */
 };
 MODULE_DEVICE_TABLE(usb, id_table);
@@ -186,6 +191,51 @@ static int qcprobe(struct usb_serial *serial, const struct usb_device_id *id)
 			 * # echo "\$GPS_STOP"  > /dev/ttyUSBx
 			 */
 			dbg("NMEA GPS interface found");
+			retval = usb_set_interface(serial->dev, ifnum, 0);
+			if (retval < 0) {
+				dev_err(&serial->dev->dev,
+					"Could not set interface, error %d\n",
+					retval);
+				retval = -ENODEV;
+				kfree(data);
+			}
+		}
+		break;
+
+	case 6:
+		/* Composite mode */
+		if (ifnum == 0) {
+			dbg("Diagnostics Monitor found");
+			retval = usb_set_interface(serial->dev, ifnum, 0);
+			if (retval < 0) {
+				dev_err(&serial->dev->dev,
+					"Could not set interface, error %d\n",
+					retval);
+				retval = -ENODEV;
+				kfree(data);
+			}
+		} else if (ifnum == 1) {
+			dbg("NMEA GPS interface found");
+			retval = usb_set_interface(serial->dev, ifnum, 0);
+			if (retval < 0) {
+				dev_err(&serial->dev->dev,
+					"Could not set interface, error %d\n",
+					retval);
+				retval = -ENODEV;
+				kfree(data);
+			}
+		} else if (ifnum == 2) {
+			dbg("Modem port found");
+			retval = usb_set_interface(serial->dev, ifnum, 0);
+			if (retval < 0) {
+				dev_err(&serial->dev->dev,
+					"Could not set interface, error %d\n",
+					retval);
+				retval = -ENODEV;
+				kfree(data);
+			}
+		} else if (ifnum == 3) {
+			dbg("Modem port found");
 			retval = usb_set_interface(serial->dev, ifnum, 0);
 			if (retval < 0) {
 				dev_err(&serial->dev->dev,

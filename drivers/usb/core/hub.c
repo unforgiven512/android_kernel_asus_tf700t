@@ -37,6 +37,8 @@
 #endif
 #endif
 
+extern int use_hsic_controller(struct usb_hcd *hcd);
+
 struct usb_hub {
 	struct device		*intfdev;	/* the "interface" device */
 	struct usb_device	*hdev;
@@ -3077,6 +3079,7 @@ static void hub_port_connect_change(struct usb_hub *hub, int port1,
 			le16_to_cpu(hub->descriptor->wHubCharacteristics);
 	struct usb_device *udev;
 	int status, i;
+	int number_of_retry = 0;
 
 	dev_dbg (hub_dev,
 		"port %d, status %04x, change %04x, %s\n",
@@ -3163,7 +3166,14 @@ static void hub_port_connect_change(struct usb_hub *hub, int port1,
 		return;
 	}
 
-	for (i = 0; i < SET_CONFIG_TRIES; i++) {
+	if(use_hsic_controller(hcd) == 1) {
+		number_of_retry = 2;
+	}else {
+		number_of_retry = SET_CONFIG_TRIES;
+	}
+	dev_dbg(hub_dev, "%s:number_of_retry=%d\n",__func__,number_of_retry);
+
+	for (i = 0; i < number_of_retry; i++) {
 
 		/* reallocate for each attempt, since references
 		 * to the previous one can escape in various ways
@@ -3737,6 +3747,7 @@ static int usb_reset_and_verify_device(struct usb_device *udev)
 	struct usb_device_descriptor	descriptor = udev->descriptor;
 	int 				i, ret = 0;
 	int				port1 = udev->portnum;
+	int				number_of_retry = 0;
 
 	if (udev->state == USB_STATE_NOTATTACHED ||
 			udev->state == USB_STATE_SUSPENDED) {
@@ -3753,7 +3764,14 @@ static int usb_reset_and_verify_device(struct usb_device *udev)
 	parent_hub = hdev_to_hub(parent_hdev);
 
 	set_bit(port1, parent_hub->busy_bits);
-	for (i = 0; i < SET_CONFIG_TRIES; ++i) {
+
+	if(use_hsic_controller(hcd) == 1) {
+		number_of_retry = 2;
+	}else {
+		number_of_retry = SET_CONFIG_TRIES;
+	}
+	dev_dbg(&udev->dev, "%s:number_of_retry=%d \n",__func__,number_of_retry);
+	for (i = 0; i < number_of_retry; ++i) {
 
 		/* ep0 maxpacket size may change; let the HCD know about it.
 		 * Other endpoints will be handled by re-enumeration. */
