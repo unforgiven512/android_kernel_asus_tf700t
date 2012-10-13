@@ -593,17 +593,20 @@ static int pad_get_psp(int reg_offset, enum power_supply_property psp,
 		ret=pad_device->bat_status;
 		static char *status_text[] = {"Unknown", "Charging", "Discharging", "Not charging", "Full"};
 		/* mask the upper byte and then find the actual status */
-		if (!(ret & BATTERY_CHARGING) && (ac_on||battery_docking_status) ){/*DSG*/
+		if (!(ret & BATTERY_CHARGING) && (ac_on||battery_docking_status))/*DSG*/
 			val->intval = POWER_SUPPLY_STATUS_CHARGING;
-			if (pad_device->old_capacity==100)
-				val->intval = POWER_SUPPLY_STATUS_FULL;
-		}
+		else if (ac_on && docking_status && (!(ret & BATTERY_FULL_CHARGED)))
+			val->intval = POWER_SUPPLY_STATUS_CHARGING;
 		else if (ret & BATTERY_FULL_CHARGED)//fc
 			val->intval = POWER_SUPPLY_STATUS_FULL;
 		else if (ret & BATTERY_FULL_DISCHARGED)//fd
 			val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
 		else 
 			val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
+
+		if (pad_device->old_capacity == 100)
+			val->intval = POWER_SUPPLY_STATUS_FULL;
+
 		printk("pad_get_psp  val->intval=%s ret=%x\n" ,status_text[val->intval],ret);//4
 	}else if (psp == POWER_SUPPLY_PROP_TEMP) {
 		ret=pad_device->bat_temp;

@@ -1762,7 +1762,6 @@ static long sensor_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
                             if(err)
                                 pr_err("Touch af stop interrupt error");
                         }
-                        fjm6mo_write_register(info->i2c_client, 1, 0x0A, 0x02, 0x3);
                     }
                 }
             }
@@ -2116,7 +2115,6 @@ static long sensor_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
                     err = isp_interrupt(INT_STATUS_AF);
                     if(err)
                         pr_err("CAF stop error: no interrupt\n");
-                    fjm6mo_write_register(info->i2c_client, 1, 0x0A, 0x02, 0x3);
                     msleep(30);
                     fjm6mo_write_register(info->i2c_client, 1, 0x0A, 0x41, 0x3);
                 }

@@ -709,7 +709,6 @@ static irqreturn_t asusdec_interrupt_handler(int irq, void *dev_id){
 	int gpio = irq_to_gpio(irq);
 
 	if (gpio == asusdec_apwake_gpio){
-		printk("[%s] asusdec_apwake_gpio\n",__func__);
 		disable_irq_nosync(irq);
 		if (ec_chip->op_mode){
 			queue_delayed_work(asusdec_wq, &ec_chip->asusdec_fw_update_work, 0);			
